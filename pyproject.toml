@@ -1,0 +1,12 @@
+[project]
+name = "week6-pcse"
+version = "0.1.0"
+description = "PCSE/WOFOST 작물 시뮬레이션 실습 예제"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pcse>=6.0",
+    "matplotlib>=3.5",
+    "pandas>=2.0",
+    "pyyaml>=5.1",
+]

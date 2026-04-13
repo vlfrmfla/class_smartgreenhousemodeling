@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 6 - PCSE 프레임워크를 활용한 WOFOST 작물 시뮬레이션</title>
+<style>
+  :root {
+    --bg: #fafafa; --fg: #1a1a1a; --accent: #2563eb;
+    --code-bg: #1e1e2e; --code-fg: #cdd6f4;
+    --card-bg: #fff; --border: #e5e7eb;
+    --green: #16a34a; --orange: #ea580c; --red: #dc2626;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Pretendard', -apple-system, 'Apple SD Gothic Neo', sans-serif;
+    background: var(--bg); color: var(--fg);
+    line-height: 1.7; max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem;
+  }
+  h1 { font-size: 2rem; margin-bottom: .5rem; }
+  h2 { font-size: 1.5rem; margin: 2.5rem 0 1rem; border-bottom: 2px solid var(--accent); padding-bottom: .3rem; }
+  h3 { font-size: 1.15rem; margin: 1.5rem 0 .5rem; color: var(--accent); }
+  p, li { margin-bottom: .5rem; }
+  ul, ol { padding-left: 1.5rem; }
+
+  .subtitle { color: #666; font-size: 1.1rem; margin-bottom: 2rem; }
+  .card {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1.5rem; margin: 1rem 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .card-title { font-weight: 700; margin-bottom: .5rem; }
+
+  .badge {
+    display: inline-block; font-size: .75rem; font-weight: 600;
+    padding: 2px 8px; border-radius: 12px; margin-right: .3rem;
+  }
+  .badge-blue { background: #dbeafe; color: #1d4ed8; }
+  .badge-green { background: #dcfce7; color: #15803d; }
+  .badge-orange { background: #ffedd5; color: #c2410c; }
+
+  pre {
+    background: var(--code-bg); color: var(--code-fg);
+    border-radius: 8px; padding: 1.2rem; margin: 1rem 0;
+    overflow-x: auto; font-size: .88rem; line-height: 1.6;
+    position: relative;
+  }
+  pre .comment { color: #6c7086; }
+  pre .keyword { color: #cba6f7; }
+  pre .string { color: #a6e3a1; }
+  pre .func { color: #89b4fa; }
+  pre .number { color: #fab387; }
+  pre .copy-btn {
+    position: absolute; top: 8px; right: 8px;
+    background: #45475a; color: #cdd6f4; border: none;
+    border-radius: 4px; padding: 4px 10px; cursor: pointer;
+    font-size: .75rem; opacity: 0; transition: opacity .2s;
+  }
+  pre:hover .copy-btn { opacity: 1; }
+  pre .copy-btn:hover { background: #585b70; }
+
+  code {
+    background: #f1f5f9; padding: 2px 6px; border-radius: 4px;
+    font-size: .9em; color: #0f172a;
+  }
+
+  table {
+    width: 100%; border-collapse: collapse; margin: 1rem 0;
+    font-size: .92rem;
+  }
+  th, td { border: 1px solid var(--border); padding: .6rem .8rem; text-align: left; }
+  th { background: #f8fafc; font-weight: 600; }
+  tr:nth-child(even) { background: #f8fafc; }
+
+  .diagram {
+    background: #f0f9ff; border: 1px solid #bae6fd;
+    border-radius: 10px; padding: 1.5rem; margin: 1.5rem 0;
+    text-align: center; font-family: monospace; line-height: 1.8;
+  }
+
+  .step-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--accent); color: #fff; font-weight: 700;
+    font-size: .85rem; margin-right: .5rem; flex-shrink: 0;
+  }
+  .step { display: flex; align-items: flex-start; margin: 1rem 0; }
+  .step-content { flex: 1; }
+
+  .result-img {
+    width: 100%; border-radius: 8px; border: 1px solid var(--border);
+    margin: 1rem 0;
+  }
+
+  .tip {
+    background: #fef3c7; border-left: 4px solid #f59e0b;
+    padding: 1rem 1.2rem; border-radius: 0 8px 8px 0; margin: 1rem 0;
+  }
+  .tip-title { font-weight: 700; color: #92400e; margin-bottom: .3rem; }
+
+  footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border); color: #999; font-size: .85rem; }
+</style>
+</head>
+<body>
+
+<h1>PCSE 프레임워크를 활용한 WOFOST 작물 시뮬레이션</h1>
+<p class="subtitle">Week 6 &mdash; 스마트 온실 모델링 이론과 개발 실습</p>
+
+<!-- ───────────────── 개요 ───────────────── -->
+<h2>1. PCSE와 WOFOST의 관계</h2>
+
+<div class="card">
+  <p class="card-title">PCSE = 프레임워크, WOFOST = 모델</p>
+  <p><strong>PCSE</strong> (Python Crop Simulation Environment)는 네덜란드 <strong>Wageningen University</strong>에서 개발한 작물 시뮬레이션 <em>프레임워크</em>입니다. PCSE 자체는 특정 작물 모델이 아니라, 다양한 모델을 실행할 수 있는 <strong>플랫폼</strong>입니다.</p>
+</div>
+
+<div class="card">
+  <p class="card-title">PCSE에 내장된 모델들</p>
+  <table>
+    <tr><th>모델</th><th>설명</th></tr>
+    <tr><td><strong>WOFOST</strong> 7.1 ~ 8.1</td><td>범용 작물 생장 모델 (오늘 사용)</td></tr>
+    <tr><td>LINTUL3</td><td>질소 제한 작물 생장 모델</td></tr>
+    <tr><td>LINGRA</td><td>초지(grassland) 생산성 모델</td></tr>
+    <tr><td>FAO WRSI</td><td>FAO 수분 요구량 충족 지수</td></tr>
+  </table>
+  <p style="margin-top:.8rem;">이번 실습에서는 PCSE 위에서 <strong>WOFOST 7.2 (Potential Production)</strong> 모델을 실행합니다.</p>
+</div>
+
+<div class="card">
+  <p class="card-title">PCSE의 특징</p>
+  <ul>
+    <li><strong>순수 Python</strong> 구현 &mdash; FORTRAN 기반 원본 WOFOST를 Python으로 재작성</li>
+    <li>모듈식 구조 &rarr; 모델 컴포넌트를 자유롭게 교체/확장 가능</li>
+    <li>기상 &middot; 토양 &middot; 작물 파라미터 &middot; 재배관리를 분리 관리</li>
+    <li>OpenMeteo, NASA Power 등 기상 API 자동 연동</li>
+  </ul>
+</div>
+
+<div class="diagram">
+  <strong>PCSE 프레임워크 구조</strong><br><br>
+  ┌─────────────────────────────────────────────────────────┐<br>
+  │&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>PCSE (프레임워크)</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br>
+  │&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br>
+  │&nbsp;&nbsp;┌──────────┐&nbsp;┌──────────┐&nbsp;┌──────────┐&nbsp;┌──────────┐&nbsp;│<br>
+  │&nbsp;&nbsp;│ 기상자료 │&nbsp;│ 작물파라 │&nbsp;│ 토양/사이│&nbsp;│ 재배관리 │&nbsp;│<br>
+  │&nbsp;&nbsp;│ Weather  │&nbsp;│ CropData │&nbsp;│ Soil/Site│&nbsp;│ AgroMgmt │&nbsp;│<br>
+  │&nbsp;&nbsp;└────┬─────┘&nbsp;└────┬─────┘&nbsp;└────┬─────┘&nbsp;└────┬─────┘&nbsp;│<br>
+  │&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└────────────┴────────────┴────────────┘&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br>
+  │&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br>
+  │&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;┌───────▼───────┐&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br>
+  │&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;<strong>WOFOST 7.2</strong>&nbsp;&nbsp;│&nbsp;&larr; 오늘 사용&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br>
+  │&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;LINTUL3&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br>
+  │&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;LINGRA&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br>
+  │&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;FAO WRSI&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br>
+  │&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└───────┬───────┘&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br>
+  │&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br>
+  │&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;┌───────▼───────┐&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br>
+  │&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│ 시뮬레이션 결과│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br>
+  │&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│ DVS, LAI, TAGP │&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br>
+  │&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└────────────────┘&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br>
+  └─────────────────────────────────────────────────────────┘
+</div>
+
+<!-- ───────────────── WOFOST 모델 ───────────────── -->
+<h2>2. WOFOST 모델 개요</h2>
+
+<div class="card">
+  <p class="card-title">WOFOST (WOrld FOod STudies)</p>
+  <p>일별(daily) 시간 스텝으로 작물 생장을 시뮬레이션하는 <strong>프로세스 기반 모델</strong>입니다.</p>
+</div>
+
+<h3>시뮬레이션 수준</h3>
+<table>
+  <tr>
+    <th>수준</th><th>모델 클래스</th><th>설명</th>
+  </tr>
+  <tr>
+    <td><span class="badge badge-green">PP</span> Potential</td>
+    <td><code>Wofost72_PP</code></td>
+    <td>빛과 온도만 고려. 물/양분 제한 없음</td>
+  </tr>
+  <tr>
+    <td><span class="badge badge-orange">WLP</span> Water-limited</td>
+    <td><code>Wofost72_WLP_FD</code></td>
+    <td>수분 스트레스 포함. 토양수분 수지 계산</td>
+  </tr>
+</table>
+
+<h3>주요 상태변수</h3>
+<table>
+  <tr><th>변수</th><th>의미</th><th>단위</th></tr>
+  <tr><td><code>DVS</code></td><td>발육단계 (0=출현, 1=개화, 2=성숙)</td><td>-</td></tr>
+  <tr><td><code>LAI</code></td><td>엽면적지수 (Leaf Area Index)</td><td>ha ha<sup>-1</sup></td></tr>
+  <tr><td><code>TAGP</code></td><td>총 지상부 건물중</td><td>kg ha<sup>-1</sup></td></tr>
+  <tr><td><code>TWSO</code></td><td>저장기관 (곡물/과실) 건물중</td><td>kg ha<sup>-1</sup></td></tr>
+  <tr><td><code>TWLV</code></td><td>잎 건물중</td><td>kg ha<sup>-1</sup></td></tr>
+  <tr><td><code>TWST</code></td><td>줄기 건물중</td><td>kg ha<sup>-1</sup></td></tr>
+  <tr><td><code>TWRT</code></td><td>뿌리 건물중</td><td>kg ha<sup>-1</sup></td></tr>
+</table>
+
+<!-- ───────────────── 환경 설정 ───────────────── -->
+<h2>3. 환경 설정</h2>
+
+<h3>uv로 프로젝트 설정 (권장)</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><span class="comment"># uv 설치 (아직 없다면)</span>
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+<span class="comment"># 프로젝트 폴더에서 의존성 설치 (venv 자동 생성)</span>
+cd week6_PCSE
+uv sync
+
+<span class="comment"># 스크립트 실행</span>
+uv run python run_pcse_example.py</pre>
+
+<h3>pip로 직접 설치</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>pip install pcse matplotlib pandas pyyaml</pre>
+
+<div class="tip">
+  <p class="tip-title">Tip</p>
+  <p><code>uv sync</code> 한 번이면 Python 가상환경 생성 + 의존성 설치가 자동으로 끝납니다. <code>uv.lock</code> 파일이 생성되어 동일한 환경을 재현할 수 있습니다.</p>
+</div>
+
+<!-- ───────────────── 코드 실습 ───────────────── -->
+<h2>4. 코드 실습: 대전 벼 시뮬레이션</h2>
+
+<p>아래 코드를 단계별로 따라가며 PCSE/WOFOST 시뮬레이션을 실행합니다.</p>
+
+<!-- Step 1 -->
+<div class="step">
+  <span class="step-num">1</span>
+  <div class="step-content">
+    <strong>라이브러리 임포트</strong>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><span class="keyword">import</span> datetime <span class="keyword">as</span> dt
+<span class="keyword">import</span> yaml
+<span class="keyword">import</span> matplotlib.pyplot <span class="keyword">as</span> plt
+<span class="keyword">import</span> matplotlib <span class="keyword">as</span> mpl
+<span class="keyword">import</span> pandas <span class="keyword">as</span> pd
+
+<span class="keyword">from</span> pcse.models <span class="keyword">import</span> <span class="func">Wofost72_PP</span>
+<span class="keyword">from</span> pcse.input <span class="keyword">import</span> (
+    <span class="func">YAMLCropDataProvider</span>,
+    <span class="func">OpenMeteoWeatherDataProvider</span>,
+    <span class="func">DummySoilDataProvider</span>,
+    <span class="func">WOFOST72SiteDataProvider</span>,
+)
+<span class="keyword">from</span> pcse.base <span class="keyword">import</span> <span class="func">ParameterProvider</span>
+
+<span class="comment"># 한글 폰트 설정 (OS별 자동 선택)</span>
+<span class="keyword">import</span> platform
+<span class="keyword">if</span> platform.<span class="func">system</span>() == <span class="string">"Darwin"</span>:
+    mpl.rcParams[<span class="string">"font.family"</span>] = <span class="string">"Apple SD Gothic Neo"</span>
+<span class="keyword">elif</span> platform.<span class="func">system</span>() == <span class="string">"Windows"</span>:
+    mpl.rcParams[<span class="string">"font.family"</span>] = <span class="string">"Malgun Gothic"</span>
+<span class="keyword">else</span>:
+    mpl.rcParams[<span class="string">"font.family"</span>] = <span class="string">"NanumGothic"</span>
+mpl.rcParams[<span class="string">"axes.unicode_minus"</span>] = <span class="number">False</span></pre>
+  </div>
+</div>
+
+<!-- Step 2 -->
+<div class="step">
+  <span class="step-num">2</span>
+  <div class="step-content">
+    <strong>기상자료 로딩</strong>
+    <p>OpenMeteo API를 통해 대전(36.35&deg;N, 127.38&deg;E)의 일별 기상자료를 자동으로 받아옵니다.</p>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>wdp = <span class="func">OpenMeteoWeatherDataProvider</span>(
+    latitude=<span class="number">36.35</span>,
+    longitude=<span class="number">127.38</span>
+)
+<span class="func">print</span>(f<span class="string">"기간: {wdp.first_date} ~ {wdp.last_date}"</span>)</pre>
+    <p>내부적으로 일사량, 최고/최저기온, 풍속, 강수량, 이슬점 등을 받아와 WOFOST가 필요한 형식으로 변환합니다.</p>
+  </div>
+</div>
+
+<!-- Step 3 -->
+<div class="step">
+  <span class="step-num">3</span>
+  <div class="step-content">
+    <strong>작물 / 토양 / 사이트 파라미터</strong>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><span class="comment"># 작물: PCSE 내장 벼 파라미터</span>
+cropd = <span class="func">YAMLCropDataProvider</span>()
+cropd.<span class="func">set_active_crop</span>(<span class="string">"rice"</span>, <span class="string">"Rice_501"</span>)
+
+<span class="comment"># 토양 & 사이트 (Potential Production에서는 사실상 미사용)</span>
+soild = <span class="func">DummySoilDataProvider</span>()
+sited = <span class="func">WOFOST72SiteDataProvider</span>(WAV=<span class="number">100</span>)
+
+<span class="comment"># 파라미터 통합</span>
+params = <span class="func">ParameterProvider</span>(
+    cropdata=cropd, soildata=soild, sitedata=sited
+)</pre>
+  </div>
+</div>
+
+<!-- Step 4 -->
+<div class="step">
+  <span class="step-num">4</span>
+  <div class="step-content">
+    <strong>재배관리 (Agromanagement) 설정</strong>
+    <p>YAML 형식으로 파종일, 수확일, 재배 방식을 정의합니다.</p>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>agro_yaml = <span class="string">"""
+- 2025-05-01:
+    CropCalendar:
+        crop_name: rice
+        variety_name: Rice_501
+        crop_start_date: 2025-05-15
+        crop_start_type: emergence
+        crop_end_date: 2025-10-15
+        crop_end_type: harvest
+        max_duration: 200
+    TimedEvents: null
+    StateEvents: null
+"""</span>
+agro = yaml.<span class="func">safe_load</span>(agro_yaml)</pre>
+    <table>
+      <tr><th>항목</th><th>값</th><th>의미</th></tr>
+      <tr><td><code>crop_start_date</code></td><td>2025-05-15</td><td>출현(emergence) 날짜</td></tr>
+      <tr><td><code>crop_end_date</code></td><td>2025-10-15</td><td>수확(harvest) 날짜</td></tr>
+      <tr><td><code>max_duration</code></td><td>200</td><td>최대 재배일수</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- Step 5 -->
+<div class="step">
+  <span class="step-num">5</span>
+  <div class="step-content">
+    <strong>모델 실행 & 결과 추출</strong>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><span class="comment"># 모델 생성 & 실행</span>
+wofost = <span class="func">Wofost72_PP</span>(params, wdp, agro)
+wofost.<span class="func">run_till_terminate</span>()
+
+<span class="comment"># 결과를 DataFrame으로 변환</span>
+output = wofost.<span class="func">get_output</span>()
+df = pd.<span class="func">DataFrame</span>(output)
+df = df.<span class="func">dropna</span>(subset=[<span class="string">"DVS"</span>])  <span class="comment"># 출현 전 행 제거</span>
+df[<span class="string">"day"</span>] = pd.<span class="func">to_datetime</span>(df[<span class="string">"day"</span>])
+df = df.<span class="func">set_index</span>(<span class="string">"day"</span>)
+
+<span class="comment"># 요약 결과</span>
+summary = wofost.<span class="func">get_summary_output</span>()[<span class="number">0</span>]
+<span class="func">print</span>(f<span class="string">"최대 LAI:  {summary['LAIMAX']:.2f}"</span>)
+<span class="func">print</span>(f<span class="string">"곡물수량:  {summary['TWSO']:.0f} kg/ha"</span>)
+<span class="func">print</span>(f<span class="string">"개화일:    {summary['DOA']}"</span>)
+<span class="func">print</span>(f<span class="string">"성숙일:    {summary['DOM']}"</span>)</pre>
+  </div>
+</div>
+
+<!-- Step 6 -->
+<div class="step">
+  <span class="step-num">6</span>
+  <div class="step-content">
+    <strong>결과 시각화</strong>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>fig, axes = plt.<span class="func">subplots</span>(<span class="number">2</span>, <span class="number">2</span>, figsize=(<span class="number">14</span>, <span class="number">10</span>))
+fig.<span class="func">suptitle</span>(<span class="string">"PCSE/WOFOST - 대전 2025"</span>, fontsize=<span class="number">15</span>, fontweight=<span class="string">"bold"</span>)
+
+<span class="comment"># DVS</span>
+axes[<span class="number">0</span>,<span class="number">0</span>].<span class="func">plot</span>(df.index, df[<span class="string">"DVS"</span>], <span class="string">"b-"</span>)
+axes[<span class="number">0</span>,<span class="number">0</span>].<span class="func">axhline</span>(y=<span class="number">1.0</span>, color=<span class="string">"r"</span>, linestyle=<span class="string">"--"</span>, alpha=<span class="number">0.5</span>)
+axes[<span class="number">0</span>,<span class="number">0</span>].<span class="func">set_title</span>(<span class="string">"DVS"</span>)
+
+<span class="comment"># LAI</span>
+axes[<span class="number">0</span>,<span class="number">1</span>].<span class="func">fill_between</span>(df.index, df[<span class="string">"LAI"</span>], color=<span class="string">"green"</span>, alpha=<span class="number">0.3</span>)
+axes[<span class="number">0</span>,<span class="number">1</span>].<span class="func">plot</span>(df.index, df[<span class="string">"LAI"</span>], <span class="string">"g-"</span>)
+axes[<span class="number">0</span>,<span class="number">1</span>].<span class="func">set_title</span>(<span class="string">"LAI"</span>)
+
+<span class="comment"># 기관별 건물중</span>
+axes[<span class="number">1</span>,<span class="number">0</span>].<span class="func">plot</span>(df.index, df[<span class="string">"TWLV"</span>], <span class="string">"g-"</span>,  label=<span class="string">"Leaves"</span>)
+axes[<span class="number">1</span>,<span class="number">0</span>].<span class="func">plot</span>(df.index, df[<span class="string">"TWST"</span>], <span class="string">"orange"</span>, label=<span class="string">"Stems"</span>)
+axes[<span class="number">1</span>,<span class="number">0</span>].<span class="func">plot</span>(df.index, df[<span class="string">"TWSO"</span>], <span class="string">"r-"</span>,  label=<span class="string">"Grain"</span>)
+axes[<span class="number">1</span>,<span class="number">0</span>].<span class="func">plot</span>(df.index, df[<span class="string">"TWRT"</span>], <span class="string">"brown"</span>, label=<span class="string">"Roots"</span>)
+axes[<span class="number">1</span>,<span class="number">0</span>].<span class="func">legend</span>()
+axes[<span class="number">1</span>,<span class="number">0</span>].<span class="func">set_title</span>(<span class="string">"Organ Dry Matter"</span>)
+
+<span class="comment"># TAGP</span>
+axes[<span class="number">1</span>,<span class="number">1</span>].<span class="func">plot</span>(df.index, df[<span class="string">"TAGP"</span>], <span class="string">"b-"</span>)
+axes[<span class="number">1</span>,<span class="number">1</span>].<span class="func">set_title</span>(<span class="string">"TAGP"</span>)
+
+plt.<span class="func">tight_layout</span>()
+plt.<span class="func">savefig</span>(<span class="string">"result_rice_daejeon_2025.png"</span>, dpi=<span class="number">150</span>)
+plt.<span class="func">show</span>()</pre>
+  </div>
+</div>
+
+<!-- ───────────────── 결과 ───────────────── -->
+<h2>5. 시뮬레이션 결과</h2>
+
+<div class="card">
+  <p class="card-title">대전 벼 (Rice_501) &mdash; 2025년</p>
+  <table>
+    <tr><th>항목</th><th>결과</th></tr>
+    <tr><td>출현일 (DOE)</td><td>2025-05-15</td></tr>
+    <tr><td>개화일 (DOA)</td><td>2025-07-23</td></tr>
+    <tr><td>성숙일 (DOM)</td><td>2025-09-03</td></tr>
+    <tr><td>수확일 (DOH)</td><td>2025-10-15</td></tr>
+    <tr><td>최대 LAI</td><td>3.62 ha/ha</td></tr>
+    <tr><td>곡물 수량 (TWSO)</td><td>5,336 kg/ha</td></tr>
+    <tr><td>총 지상부 (TAGP)</td><td>11,532 kg/ha</td></tr>
+  </table>
+</div>
+
+<p>아래 그래프에서 DVS, LAI, 기관별 건물중, TAGP의 시간 변화를 확인할 수 있습니다.</p>
+<img class="result-img" src="result_rice_daejeon_2025.png" alt="PCSE 벼 시뮬레이션 결과">
+
+<!-- ───────────────── 검증 ───────────────── -->
+<h3>한국 벼 실측 데이터와 비교</h3>
+
+<div class="card">
+  <p class="card-title">시뮬레이션 결과 vs 한국 벼 실측값</p>
+  <p>WOFOST 기본 파라미터(Rice_501)는 한국 품종에 맞게 보정(calibration)된 것이 아니므로, 실측과 차이가 있을 수 있습니다.</p>
+  <table>
+    <tr><th>항목</th><th>시뮬레이션</th><th>한국 실측 범위</th><th>평가</th></tr>
+    <tr><td>곡물수량 (건물중)</td><td>5,336 kg/ha</td><td>5,000 ~ 6,500 kg/ha</td><td style="color:#16a34a;">적정 범위</td></tr>
+    <tr><td>최대 LAI</td><td>3.62</td><td>4.0 ~ 7.0</td><td style="color:#ea580c;">다소 낮음</td></tr>
+    <tr><td>TAGP (총 지상부)</td><td>11,532 kg/ha</td><td>12,000 ~ 16,000 kg/ha</td><td style="color:#ea580c;">다소 낮음</td></tr>
+    <tr><td>수확지수 (HI)</td><td>0.46</td><td>0.40 ~ 0.50</td><td style="color:#16a34a;">적정 범위</td></tr>
+  </table>
+  <p style="margin-top:.8rem; font-size:.9rem; color:#666;">
+    참고: 한국 벼 통계 &mdash; KOSIS/FAO 기준 최근 전국 평균 조곡 수량 약 6,800~7,200 kg/ha (수분 14% 기준).<br>
+    LAI가 실측보다 낮은 것은 SLATB(비엽면적), RGRLAI(상대엽면적성장률) 등 한국 자포니카 품종에 맞는 보정이 필요함을 의미합니다.
+  </p>
+</div>
+
+<!-- ───────────────── 버전 비교 ───────────────── -->
+<h2>6. WOFOST 버전 비교</h2>
+
+<p>PCSE에는 WOFOST의 여러 버전이 내장되어 있어, 같은 조건에서 버전별 차이를 비교할 수 있습니다.</p>
+
+<div class="card">
+  <p class="card-title">WOFOST 버전별 특징</p>
+  <table>
+    <tr><th>버전</th><th>모델 클래스</th><th>추가 기능</th></tr>
+    <tr><td>7.2</td><td><code>Wofost72_PP</code></td><td>기본 (빛 + 온도)</td></tr>
+    <tr><td>7.3</td><td><code>Wofost73_PP</code></td><td>+ CO<sub>2</sub> 반응</td></tr>
+    <tr><td>8.1</td><td><code>Wofost81_PP</code></td><td>+ CO<sub>2</sub> + 질소 수지</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <p class="card-title">버전별 비교 결과 (대전 벼 2025, Potential Production)</p>
+  <table>
+    <tr><th>항목</th><th>v7.2</th><th>v7.3 (CO<sub>2</sub>=400ppm)</th><th>v8.1 (CO<sub>2</sub>+N)</th></tr>
+    <tr><td>곡물수량 (kg/ha)</td><td>5,336</td><td>5,690</td><td>5,538</td></tr>
+    <tr><td>TAGP (kg/ha)</td><td>11,532</td><td>12,502</td><td>11,357</td></tr>
+    <tr><td>최대 LAI</td><td>3.62</td><td>4.01</td><td>3.32</td></tr>
+    <tr><td>개화일</td><td colspan="3" style="text-align:center;">2025-07-23 (동일)</td></tr>
+    <tr><td>성숙일</td><td colspan="3" style="text-align:center;">2025-09-03 (동일)</td></tr>
+  </table>
+  <p style="margin-top:.8rem;">v7.3은 CO<sub>2</sub> 시비 효과로 수량이 +6.6% 증가하며, v8.1은 질소 제한으로 다시 소폭 감소합니다.</p>
+</div>
+
+<img class="result-img" src="result_version_comparison.png" alt="WOFOST 버전별 비교 그래프">
+
+<h3>버전 비교 코드 (핵심 부분)</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><span class="keyword">from</span> pcse.models <span class="keyword">import</span> <span class="func">Wofost72_PP</span>, <span class="func">Wofost73_PP</span>, <span class="func">Wofost81_PP</span>
+<span class="keyword">from</span> pcse.input <span class="keyword">import</span> (
+    <span class="func">WOFOST72SiteDataProvider</span>,
+    <span class="func">WOFOST73SiteDataProvider</span>,
+    <span class="func">WOFOST81SiteDataProvider_Classic</span>,
+)
+
+<span class="comment"># v7.2: 빛 + 온도만</span>
+cropd = <span class="func">YAMLCropDataProvider</span>(model=<span class="func">Wofost72_PP</span>)
+sited = <span class="func">WOFOST72SiteDataProvider</span>(WAV=<span class="number">100</span>)
+
+<span class="comment"># v7.3: + CO2 반응</span>
+cropd = <span class="func">YAMLCropDataProvider</span>(model=<span class="func">Wofost73_PP</span>)
+sited = <span class="func">WOFOST73SiteDataProvider</span>(WAV=<span class="number">100</span>, CO2=<span class="number">400</span>)
+
+<span class="comment"># v8.1: + CO2 + 질소</span>
+cropd = <span class="func">YAMLCropDataProvider</span>(model=<span class="func">Wofost81_PP</span>)
+sited = <span class="func">WOFOST81SiteDataProvider_Classic</span>(
+    WAV=<span class="number">100</span>, CO2=<span class="number">400</span>,
+    NAVAILI=<span class="number">100</span>, NSOILBASE=<span class="number">50</span>, NSOILBASE_FR=<span class="number">0.025</span>,
+)</pre>
+
+<div class="tip">
+  <p class="tip-title">Tip</p>
+  <p><code>YAMLCropDataProvider(model=...)</code>에 모델 클래스를 넘기면, 해당 버전에 맞는 작물 파라미터를 자동으로 가져옵니다. 전체 코드는 <code>run_compare_versions.py</code>를 참고하세요.</p>
+</div>
+
+<!-- ───────────────── 내장 작물 ───────────────── -->
+<h2>7. PCSE 내장 작물 목록</h2>
+
+<p><code>YAMLCropDataProvider</code>에 포함된 작물과 품종입니다. 아래 작물명/품종명을 <code>set_active_crop()</code>에 넣어 바로 사용할 수 있습니다.</p>
+
+<table>
+  <tr><th>작물</th><th>품종 (예시)</th></tr>
+  <tr><td>wheat</td><td>Winter_wheat_101 ~ 107, bermude, apache</td></tr>
+  <tr><td>rice</td><td>Rice_501, Rice_IR64, Rice_IR72 등</td></tr>
+  <tr><td>maize</td><td>Grain_maize_201 ~ 205, Fodder_maize_nl</td></tr>
+  <tr><td>potato</td><td>Potato_701 ~ 704, Innovator, Fontane 등</td></tr>
+  <tr><td>barley</td><td>Spring_barley_301</td></tr>
+  <tr><td>soybean</td><td>Soybean_901 ~ 906</td></tr>
+  <tr><td>sugarbeet</td><td>Sugarbeet_601 ~ 604</td></tr>
+  <tr><td>rapeseed</td><td>Oilseed_rape_1001 ~ 1004</td></tr>
+  <tr><td>sunflower</td><td>Sunflower_1101</td></tr>
+  <tr><td colspan="2"><em>기타: cassava, chickpea, cotton, cowpea, fababean, groundnut, millet, mungbean, pigeonpea, sorghum, sugarcane, sweetpotato, tobacco, seed_onion</em></td></tr>
+</table>
+
+<!-- ───────────────── 실습 과제 ───────────────── -->
+<h2>8. 실습 과제</h2>
+
+<div class="card">
+  <p class="card-title">과제 1: 작물 바꿔보기</p>
+  <p>벼 대신 <strong>감자(potato)</strong>로 바꾸어 시뮬레이션을 실행해 보세요.</p>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>cropd.<span class="func">set_active_crop</span>(<span class="string">"potato"</span>, <span class="string">"Potato_701"</span>)
+
+<span class="comment"># 감자 재배 기간도 변경 필요 (4월~9월)</span>
+agro_yaml = <span class="string">"""
+- 2025-04-01:
+    CropCalendar:
+        crop_name: potato
+        variety_name: Potato_701
+        crop_start_date: 2025-04-15
+        crop_start_type: emergence
+        crop_end_date: 2025-09-30
+        crop_end_type: harvest
+        max_duration: 200
+    TimedEvents: null
+    StateEvents: null
+"""</span></pre>
+</div>
+
+<div class="card">
+  <p class="card-title">과제 2: 지역 바꿔보기</p>
+  <p>대전 대신 다른 지역의 좌표를 넣어 기상조건에 따른 수량 변화를 비교해 보세요.</p>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><span class="comment"># 예: 제주 (33.50°N, 126.53°E)</span>
+wdp_jeju = <span class="func">OpenMeteoWeatherDataProvider</span>(
+    latitude=<span class="number">33.50</span>, longitude=<span class="number">126.53</span>
+)
+
+<span class="comment"># 예: 춘천 (37.88°N, 127.73°E)</span>
+wdp_cc = <span class="func">OpenMeteoWeatherDataProvider</span>(
+    latitude=<span class="number">37.88</span>, longitude=<span class="number">127.73</span>
+)</pre>
+</div>
+
+<div class="card">
+  <p class="card-title">과제 3: 파종일 변경 효과</p>
+  <p>출현일을 5월 1일, 5월 15일, 6월 1일로 바꿔가며 수량 변화를 비교해 보세요.</p>
+</div>
+
+<!-- ───────────────── 참고자료 ───────────────── -->
+<h2>9. 참고자료</h2>
+<ul>
+  <li>PCSE 문서: <a href="https://pcse.readthedocs.io" target="_blank">pcse.readthedocs.io</a></li>
+  <li>PCSE 예제 노트북: <a href="https://github.com/ajwdewit/pcse_notebooks" target="_blank">github.com/ajwdewit/pcse_notebooks</a></li>
+  <li>PCSE 소스코드: <a href="https://github.com/ajwdewit/pcse" target="_blank">github.com/ajwdewit/pcse</a></li>
+  <li>WOFOST 모델 설명: <a href="https://www.wur.nl/en/show/wofost.htm" target="_blank">Wageningen - WOFOST</a></li>
+</ul>
+
+<footer>
+  <p>Week 6 &mdash; 스마트 온실 모델링 이론과 개발 실습 | CNU 2025</p>
+</footer>
+
+<script>
+function copyCode(btn) {
+  const pre = btn.parentElement;
+  const code = pre.textContent.replace('Copy', '').trim();
+  navigator.clipboard.writeText(code);
+  btn.textContent = 'Copied!';
+  setTimeout(() => btn.textContent = 'Copy', 1500);
+}
+</script>
+
+</body>
+</html>

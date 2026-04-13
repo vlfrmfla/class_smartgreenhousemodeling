@@ -508,23 +508,8 @@ sited = <span class="func">WOFOST81SiteDataProvider_Classic</span>(
     <tr><th>항목</th><th>내용</th></tr>
     <tr><td>API</td><td><a href="https://www.data.go.kr/data/15064971/openapi.do" target="_blank">농촌진흥청 국립식량과학원_벼 작황 성적 정보 서비스</a></td></tr>
     <tr><td>제공 데이터</td><td>재배법, 생육조사 9회차 (초장/경수/수수/건물중/수량 등)</td></tr>
-    <tr><td>비용</td><td>무료 (회원가입 &rarr; 활용신청 &rarr; 자동승인)</td></tr>
+    <tr><td>비용</td><td>무료 (회원가입 &rarr; 활용신청 &rarr; 자동승인, 1~2시간 후 활성화)</td></tr>
   </table>
-</div>
-
-<h3>API 데이터 수집 흐름</h3>
-<div class="diagram">
-  <strong>공공데이터포털 API 활용 흐름</strong><br><br>
-  ┌──────────────┐&nbsp;&nbsp;&nbsp;&nbsp;┌───────────────┐&nbsp;&nbsp;&nbsp;&nbsp;┌───────────────┐<br>
-  │ data.go.kr   │&nbsp;&rarr;&nbsp;&nbsp;│ API 인증키 발급│&nbsp;&rarr;&nbsp;&nbsp;│ Python으로 호출│<br>
-  │ 활용신청     │&nbsp;&nbsp;&nbsp;&nbsp;│ (자동승인)     │&nbsp;&nbsp;&nbsp;&nbsp;│ requests.get()│<br>
-  └──────────────┘&nbsp;&nbsp;&nbsp;&nbsp;└───────────────┘&nbsp;&nbsp;&nbsp;&nbsp;└───────┬───────┘<br>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼<br>
-  ┌──────────────┐&nbsp;&nbsp;&nbsp;&nbsp;┌───────────────┐&nbsp;&nbsp;&nbsp;&nbsp;┌───────────────┐<br>
-  │ 시뮬레이션과 │&nbsp;&larr;&nbsp;&nbsp;│ DataFrame으로  │&nbsp;&larr;&nbsp;&nbsp;│ JSON 응답 수신│<br>
-  │ 비교/시각화  │&nbsp;&nbsp;&nbsp;&nbsp;│ 변환           │&nbsp;&nbsp;&nbsp;&nbsp;│ (9회차 데이터)│<br>
-  └──────────────┘&nbsp;&nbsp;&nbsp;&nbsp;└───────────────┘&nbsp;&nbsp;&nbsp;&nbsp;└───────────────┘
 </div>
 
 <h3>API에서 제공하는 회차별 데이터</h3>
@@ -537,72 +522,137 @@ sited = <span class="func">WOFOST81SiteDataProvider_Classic</span>(
   <tr><td>9회차</td><td><code>getExprTmrd_09List_v2</code></td><td>10a당 수량 (정조/현미/백미), 등숙비율</td></tr>
 </table>
 
-<h3>데이터 수집 코드</h3>
-<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><span class="keyword">import</span> requests
-<span class="keyword">import</span> pandas <span class="keyword">as</span> pd
+<!-- ───── 인터랙티브 API 도구 ───── -->
+<h3>실측 데이터 조회 도구</h3>
+<p>아래에서 API 인증키를 입력하고 버튼을 누르면 바로 데이터를 조회할 수 있습니다.</p>
 
-SERVICE_KEY = <span class="string">"발급받은_Decoding_인증키"</span>
-BASE_URL = <span class="string">"https://apis.data.go.kr/1390803/RcepntCrpstScoreInfoService_v2"</span>
+<div class="card" style="background:#f8fafc;">
+  <div style="display:grid; grid-template-columns:120px 1fr; gap:8px 12px; align-items:center;">
+    <label for="apiKey" style="font-weight:600;">Decoding 인증키</label>
+    <input id="apiKey" type="text" placeholder="공공데이터포털에서 발급받은 Decoding 키"
+           style="width:100%; padding:8px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:.9rem;">
 
-<span class="keyword">def</span> <span class="func">call_api</span>(endpoint, year, area_code=<span class="keyword">None</span>):
-    params = {
-        <span class="string">"serviceKey"</span>: SERVICE_KEY,
-        <span class="string">"pageNo"</span>: <span class="string">"1"</span>,
-        <span class="string">"numOfRows"</span>: <span class="string">"1000"</span>,
-        <span class="string">"srchExprYear"</span>: <span class="func">str</span>(year),
-    }
-    <span class="keyword">if</span> area_code:
-        params[<span class="string">"srchExprAreaCode"</span>] = area_code
+    <label for="yearSelect" style="font-weight:600;">시험년도</label>
+    <select id="yearSelect" style="width:140px; padding:8px; border:1px solid #d1d5db; border-radius:6px;">
+      <option value="2024">2024</option>
+      <option value="2023" selected>2023</option>
+      <option value="2022">2022</option>
+      <option value="2021">2021</option>
+      <option value="2020">2020</option>
+      <option value="2019">2019</option>
+      <option value="2018">2018</option>
+      <option value="2017">2017</option>
+    </select>
 
-    resp = requests.<span class="func">get</span>(f<span class="string">"{BASE_URL}/{endpoint}"</span>, params=params)
-    data = resp.<span class="func">json</span>()
-    <span class="keyword">return</span> pd.<span class="func">DataFrame</span>(data[<span class="string">"body"</span>][<span class="string">"items"</span>])
+    <label for="roundSelect" style="font-weight:600;">조회 회차</label>
+    <select id="roundSelect" style="width:280px; padding:8px; border:1px solid #d1d5db; border-radius:6px;">
+      <option value="getCodeList_v2">코드목록 (품종/지역)</option>
+      <option value="getExprTmrd_01List_v2">1회차 (파종/이앙)</option>
+      <option value="getExprTmrd_02List_v2">2회차 (생육 1차)</option>
+      <option value="getExprTmrd_06List_v2">6회차 (수수/립수)</option>
+      <option value="getExprTmrd_08List_v2">8회차 (건물중)</option>
+      <option value="getExprTmrd_09List_v2" selected>9회차 (수량)</option>
+    </select>
+  </div>
 
-<span class="comment"># 코드목록 (품종, 지역 코드 확인)</span>
-codes = <span class="func">call_api</span>(<span class="string">"getCodeList_v2"</span>, <span class="number">2023</span>)
+  <div style="margin-top:12px; display:flex; gap:8px;">
+    <button onclick="fetchRDA()" id="fetchBtn"
+            style="padding:10px 24px; background:#2563eb; color:#fff; border:none; border-radius:6px; font-size:.95rem; font-weight:600; cursor:pointer;">
+      데이터 조회
+    </button>
+    <button onclick="fetchAndCompare()" id="compareBtn"
+            style="padding:10px 24px; background:#16a34a; color:#fff; border:none; border-radius:6px; font-size:.95rem; font-weight:600; cursor:pointer;">
+      WOFOST 비교
+    </button>
+    <span id="statusMsg" style="align-self:center; font-size:.9rem; color:#666;"></span>
+  </div>
+</div>
 
-<span class="comment"># 9회차: 수량 데이터</span>
-yield_data = <span class="func">call_api</span>(<span class="string">"getExprTmrd_09List_v2"</span>, <span class="number">2023</span>, area_code=<span class="string">"0352"</span>)
+<!-- 결과 출력 영역 -->
+<div id="resultArea" style="display:none; margin-top:1rem;">
+  <div class="card">
+    <p class="card-title" id="resultTitle">조회 결과</p>
+    <p id="resultCount" style="font-size:.9rem; color:#666; margin-bottom:.5rem;"></p>
+    <div style="overflow-x:auto;">
+      <table id="resultTable"></table>
+    </div>
+  </div>
+</div>
 
-<span class="comment"># 8회차: 건물중 데이터</span>
-biomass_data = <span class="func">call_api</span>(<span class="string">"getExprTmrd_08List_v2"</span>, <span class="number">2023</span>, area_code=<span class="string">"0352"</span>)</pre>
+<!-- 비교 결과 영역 -->
+<div id="compareArea" style="display:none; margin-top:1rem;">
+  <div class="card">
+    <p class="card-title">WOFOST 시뮬레이션 vs 농진청 실측 데이터</p>
+    <table id="compareTable"></table>
+    <div id="compareChart" style="margin-top:1rem;"></div>
+    <p id="compareNote" style="margin-top:.8rem; font-size:.9rem; color:#666;"></p>
+  </div>
+</div>
 
-<h3>시뮬레이션 결과 vs 참고 범위</h3>
+<h3>시뮬레이션 vs 농진청 실측 데이터 (2023년)</h3>
 
 <div class="card">
-  <p class="card-title">검증 결과 (2023년 대전 벼 기준)</p>
+  <p class="card-title">WOFOST vs 농촌진흥청 벼 작황 실측 (2023, 전국 76건 평균)</p>
   <table>
-    <tr><th>항목</th><th>WOFOST 시뮬레이션</th><th>한국 실측 범위</th><th>평가</th></tr>
+    <tr><th>항목</th><th>WOFOST 시뮬레이션</th><th>농진청 실측</th><th>차이</th></tr>
     <tr>
       <td>곡물수량 (건물중)</td><td>5,923 kg/ha</td>
-      <td>5,000 ~ 6,500 kg/ha</td>
-      <td style="color:#16a34a;">적정</td>
+      <td>6,484 kg/ha (정조 7,539 &times; 0.86)</td>
+      <td style="color:#16a34a;">-8.6%</td>
+    </tr>
+    <tr>
+      <td>현미수량</td><td>-</td>
+      <td>6,250 kg/ha (625 kg/10a)</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>백미수량</td><td>-</td>
+      <td>5,740 kg/ha (574 kg/10a)</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>등숙비율</td><td>-</td>
+      <td>89.5%</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>정조천립중</td><td>-</td>
+      <td>27.3 g</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>최대 LAI</td><td>3.39</td>
-      <td>4.0 ~ 7.0</td>
-      <td style="color:#ea580c;">낮음</td>
+      <td>(미제공)</td>
+      <td style="color:#ea580c;">실측 대비 낮을 가능성</td>
     </tr>
     <tr>
       <td>TAGP (총 지상부)</td><td>11,435 kg/ha</td>
-      <td>12,000 ~ 16,000 kg/ha</td>
-      <td style="color:#ea580c;">다소 낮음</td>
-    </tr>
-    <tr>
-      <td>수확지수 (HI)</td><td>0.52</td>
-      <td>0.40 ~ 0.50</td>
-      <td style="color:#f59e0b;">다소 높음</td>
+      <td>(미제공)</td>
+      <td>-</td>
     </tr>
   </table>
-  <p style="margin-top:.8rem; font-size:.9rem; color:#666;">
-    WOFOST 기본 파라미터(Rice_501)는 한국 자포니카 품종용으로 보정되지 않았기 때문에 LAI와 TAGP가 실측보다 낮게 나옵니다.
-    API 연결 후 실제 RDA 시험 데이터와 직접 비교할 수 있습니다.
-  </p>
+</div>
+
+<div class="card">
+  <p class="card-title">9회차 컬럼 매핑 (exam → 실제 항목)</p>
+  <p style="font-size:.9rem; color:#666; margin-bottom:.5rem;">API 응답의 <code>exam1</code>~<code>exam7</code>은 아래와 같은 항목입니다.</p>
+  <table>
+    <tr><th>컬럼</th><th>항목</th><th>단위</th><th>2023 평균</th></tr>
+    <tr><td><code>pajong</code></td><td>등숙비율</td><td>%</td><td>89.5</td></tr>
+    <tr><td><code>exam1</code></td><td>10a당 수량 (정조중)</td><td>kg/10a</td><td>753.9</td></tr>
+    <tr><td><code>exam3</code></td><td>정조 천립중</td><td>g</td><td>27.3</td></tr>
+    <tr><td><code>exam4</code></td><td>10a당 수량 (현미중)</td><td>kg/10a</td><td>625.0</td></tr>
+    <tr><td><code>exam5</code></td><td>정현비율</td><td>%</td><td>82.9</td></tr>
+    <tr><td><code>exam6</code></td><td>현미 천립중</td><td>g</td><td>23.0</td></tr>
+    <tr><td><code>exam7</code></td><td>10a당 수량 (백미중)</td><td>kg/10a</td><td>574.0</td></tr>
+  </table>
 </div>
 
 <div class="tip">
-  <p class="tip-title">Tip: API 키 활성화</p>
-  <p>data.go.kr에서 활용 신청 후 <strong>1~2시간</strong> 정도 지나야 인증키가 활성화됩니다. 키가 활성화되면 <code>fetch_rda_data.py</code>의 <code>SERVICE_KEY</code>에 Decoding 키를 넣고 실행하세요.</p>
+  <p class="tip-title">해석</p>
+  <p>WOFOST의 TWSO(곡물 건물중)는 정조(rough rice)에서 수분(~14%)을 뺀 값에 해당합니다.
+     실측 정조수량 7,539 kg/ha &times; 0.86 = <strong>6,484 kg/ha</strong>와 비교하면
+     WOFOST는 약 <strong>8.6% 과소추정</strong>으로, 보정 없이도 합리적 수준입니다.</p>
 </div>
 
 <!-- ───────────────── 실습 과제 ───────────────── -->
@@ -668,6 +718,191 @@ function copyCode(btn) {
   navigator.clipboard.writeText(code);
   btn.textContent = 'Copied!';
   setTimeout(() => btn.textContent = 'Copy', 1500);
+}
+
+// ─────────────────────────────────────────
+// 농진청 벼 작황 API 호출
+// ─────────────────────────────────────────
+const BASE = 'https://apis.data.go.kr/1390803/RcepntCrpstScoreInfoService_v2';
+
+// WOFOST 시뮬레이션 결과 (연도별, run_pcse_example.py로 사전 계산)
+const WOFOST_REF = {
+  2023: { TWSO: 5923, TAGP: 11435, LAIMAX: 3.39, HI: 0.52 },
+  2025: { TWSO: 5336, TAGP: 11532, LAIMAX: 3.62, HI: 0.46 },
+};
+
+function setStatus(msg, isError) {
+  const el = document.getElementById('statusMsg');
+  el.textContent = msg;
+  el.style.color = isError ? '#dc2626' : '#666';
+}
+
+async function callRDA(endpoint, params) {
+  const key = document.getElementById('apiKey').value.trim();
+  if (!key) { setStatus('인증키를 입력하세요', true); return null; }
+
+  const url = new URL(`${BASE}/${endpoint}`);
+  url.searchParams.set('serviceKey', key);
+  url.searchParams.set('pageNo', '1');
+  url.searchParams.set('numOfRows', '1000');
+  Object.entries(params || {}).forEach(([k,v]) => url.searchParams.set(k, v));
+
+  setStatus('조회 중...');
+  try {
+    const resp = await fetch(url.toString());
+    if (resp.status === 401) {
+      setStatus('인증 실패 (401) — 키를 확인하거나 활성화를 기다려주세요', true);
+      return null;
+    }
+    if (!resp.ok) {
+      setStatus(`HTTP ${resp.status} 에러`, true);
+      return null;
+    }
+    const data = await resp.json();
+    const body = data.body || data;
+    const items = body.items || [];
+    setStatus(`${items.length}건 조회 완료`);
+    return items;
+  } catch (e) {
+    // CORS 차단 시 안내
+    setStatus('요청 실패 — CORS 차단일 수 있습니다 (아래 안내 참고)', true);
+    showCorsHelp(url.toString());
+    return null;
+  }
+}
+
+function showCorsHelp(apiUrl) {
+  const area = document.getElementById('resultArea');
+  area.style.display = 'block';
+  document.getElementById('resultTitle').textContent = 'CORS 차단 안내';
+  document.getElementById('resultCount').textContent =
+    '브라우저 보안 정책(CORS)으로 API 직접 호출이 차단될 수 있습니다.';
+  document.getElementById('resultTable').innerHTML = `
+    <tr><th>해결 방법</th></tr>
+    <tr><td>
+      <strong>방법 1.</strong> 아래 URL을 브라우저 주소창에 직접 붙여넣기<br>
+      <input type="text" value="${apiUrl}" readonly
+        style="width:100%;padding:6px;margin:6px 0;font-size:.8rem;border:1px solid #d1d5db;border-radius:4px;"
+        onclick="this.select()">
+    </td></tr>
+    <tr><td>
+      <strong>방법 2.</strong> Python으로 실행<br>
+      <code style="font-size:.85rem;">uv run python fetch_rda_data.py</code>
+    </td></tr>
+  `;
+}
+
+function renderTable(items) {
+  if (!items || items.length === 0) return;
+  const area = document.getElementById('resultArea');
+  area.style.display = 'block';
+  document.getElementById('resultTitle').textContent = '조회 결과';
+  document.getElementById('resultCount').textContent = `총 ${items.length}건`;
+
+  const keys = Object.keys(items[0]);
+  let html = '<tr>' + keys.map(k => `<th>${k}</th>`).join('') + '</tr>';
+  items.slice(0, 50).forEach(row => {
+    html += '<tr>' + keys.map(k => `<td>${row[k] ?? ''}</td>`).join('') + '</tr>';
+  });
+  if (items.length > 50) {
+    html += `<tr><td colspan="${keys.length}" style="text-align:center;color:#666;">... 외 ${items.length - 50}건 (최대 50건 표시)</td></tr>`;
+  }
+  document.getElementById('resultTable').innerHTML = html;
+}
+
+async function fetchRDA() {
+  const year = document.getElementById('yearSelect').value;
+  const endpoint = document.getElementById('roundSelect').value;
+  const params = {};
+  if (endpoint !== 'getCodeList_v2') params.srchExprYear = year;
+
+  const items = await callRDA(endpoint, params);
+  if (items) renderTable(items);
+}
+
+async function fetchAndCompare() {
+  const year = document.getElementById('yearSelect').value;
+
+  // 9회차 (수량)
+  setStatus('9회차 수량 데이터 조회 중...');
+  const yieldItems = await callRDA('getExprTmrd_09List_v2', { srchExprYear: year });
+  if (!yieldItems) return;
+
+  // 8회차 (건물중)
+  setStatus('8회차 건물중 데이터 조회 중...');
+  const biomassItems = await callRDA('getExprTmrd_08List_v2', { srchExprYear: year });
+
+  // 9회차 컬럼 매핑:
+  //   pajong = 등숙비율(%), exam1 = 정조수량(kg/10a), exam3 = 정조천립중(g)
+  //   exam4 = 현미수량(kg/10a), exam5 = 정현비율(%), exam6 = 현미천립중(g)
+  //   exam7 = 백미수량(kg/10a)
+  const parse = (items, col) => {
+    const vals = [];
+    items.forEach(r => { const v = parseFloat(r[col]); if (!isNaN(v) && v > 0) vals.push(v); });
+    return vals;
+  };
+  const avg = arr => arr.length ? arr.reduce((a,b) => a+b, 0) / arr.length : null;
+  const fmt = v => v !== null ? v.toFixed(1) : '-';
+
+  const roughYields = parse(yieldItems, 'exam1');   // 정조수량 kg/10a
+  const brownYields = parse(yieldItems, 'exam4');   // 현미수량 kg/10a
+  const milledYields = parse(yieldItems, 'exam7');  // 백미수량 kg/10a
+  const ripeness = parse(yieldItems, 'pajong');      // 등숙비율 %
+  const rough1000 = parse(yieldItems, 'exam3');      // 정조천립중 g
+
+  // WOFOST 참조값
+  const wof = WOFOST_REF[year] || WOFOST_REF[2023];
+
+  // WOFOST TWSO = 곡물 건물중 ≈ 정조수량 × 0.86 (수분 14% 제거)
+  const roughAvg = avg(roughYields);
+  const roughDryAvg = roughAvg !== null ? roughAvg * 10 * 0.86 : null;  // kg/ha 건물중
+  const brownAvg = avg(brownYields);
+  const milledAvg = avg(milledYields);
+  const ripAvg = avg(ripeness);
+  const r1000Avg = avg(rough1000);
+
+  const area = document.getElementById('compareArea');
+  area.style.display = 'block';
+
+  let html = `<tr><th>항목</th><th>WOFOST</th><th>농진청 실측 (${year}, ${yieldItems.length}건)</th><th>차이</th></tr>`;
+
+  if (roughDryAvg !== null) {
+    const diff = ((wof.TWSO - roughDryAvg) / roughDryAvg * 100).toFixed(1);
+    html += `<tr>
+      <td>곡물 건물중</td>
+      <td>${wof.TWSO.toLocaleString()} kg/ha</td>
+      <td>${Math.round(roughDryAvg).toLocaleString()} kg/ha (정조 ${fmt(roughAvg)} kg/10a &times; 0.86)</td>
+      <td style="color:${Math.abs(diff)<15?'#16a34a':'#ea580c'}">${diff>0?'+':''}${diff}%</td>
+    </tr>`;
+  }
+  if (roughAvg !== null) {
+    html += `<tr><td>정조수량</td><td>-</td><td>${fmt(roughAvg)} kg/10a = ${Math.round(roughAvg*10).toLocaleString()} kg/ha</td><td></td></tr>`;
+  }
+  if (brownAvg !== null) {
+    html += `<tr><td>현미수량</td><td>-</td><td>${fmt(brownAvg)} kg/10a = ${Math.round(brownAvg*10).toLocaleString()} kg/ha</td><td></td></tr>`;
+  }
+  if (milledAvg !== null) {
+    html += `<tr><td>백미수량</td><td>-</td><td>${fmt(milledAvg)} kg/10a = ${Math.round(milledAvg*10).toLocaleString()} kg/ha</td><td></td></tr>`;
+  }
+  if (ripAvg !== null) {
+    html += `<tr><td>등숙비율</td><td>-</td><td>${fmt(ripAvg)}%</td><td></td></tr>`;
+  }
+  if (r1000Avg !== null) {
+    html += `<tr><td>정조 천립중</td><td>-</td><td>${fmt(r1000Avg)} g</td><td></td></tr>`;
+  }
+
+  html += `<tr><td>최대 LAI</td><td>${wof.LAIMAX}</td><td>(미제공)</td><td></td></tr>`;
+  html += `<tr><td>TAGP</td><td>${wof.TAGP.toLocaleString()} kg/ha</td><td>(미제공)</td><td></td></tr>`;
+
+  document.getElementById('compareTable').innerHTML = html;
+
+  const note = roughDryAvg !== null
+    ? `WOFOST TWSO vs 정조건물중: ${((wof.TWSO/roughDryAvg)*100).toFixed(1)}% | 9회차 ${roughYields.length}건, 8회차 ${biomassItems?biomassItems.length:0}건`
+    : `수량 데이터를 찾지 못했습니다. (${yieldItems.length}건 조회됨)`;
+  document.getElementById('compareNote').textContent = note;
+
+  setStatus('비교 완료');
+  renderTable(yieldItems);
 }
 </script>
 

@@ -658,45 +658,169 @@ sited = <span class="func">WOFOST81SiteDataProvider_Classic</span>(
 <!-- ───────────────── 실습 과제 ───────────────── -->
 <h2>9. 실습 과제</h2>
 
-<div class="card">
-  <p class="card-title">과제 1: 작물 바꿔보기</p>
-  <p>벼 대신 <strong>감자(potato)</strong>로 바꾸어 시뮬레이션을 실행해 보세요.</p>
-<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>cropd.<span class="func">set_active_crop</span>(<span class="string">"potato"</span>, <span class="string">"Potato_701"</span>)
+<p>아래 과제를 순서대로 수행하며, 작물 모델 시뮬레이션의 전체 워크플로우를 직접 경험합니다.</p>
 
-<span class="comment"># 감자 재배 기간도 변경 필요 (4월~9월)</span>
-agro_yaml = <span class="string">"""
-- 2025-04-01:
-    CropCalendar:
-        crop_name: potato
-        variety_name: Potato_701
-        crop_start_date: 2025-04-15
-        crop_start_type: emergence
-        crop_end_date: 2025-09-30
-        crop_end_type: harvest
-        max_duration: 200
-    TimedEvents: null
-    StateEvents: null
-"""</span></pre>
+<!-- 과제 A -->
+<div class="card">
+  <p class="card-title">과제 A. 환경 설정 &amp; 기본 시뮬레이션 실행 <span class="badge badge-green">기초</span></p>
+  <ol>
+    <li>레포를 클론하고 의존성을 설치하세요.
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>git clone https://github.com/vlfrmfla/class_smartgreenhousemodeling.git
+cd class_smartgreenhousemodeling
+uv sync</pre>
+    </li>
+    <li><code>run_pcse_example.py</code>를 실행하고, 출력되는 시뮬레이션 결과(DVS, LAI, TAGP, TWSO)의 의미를 정리하세요.
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>uv run python run_pcse_example.py</pre>
+    </li>
+    <li><code>sim_fig/result_rice_daejeon_2025.png</code> 그래프를 확인하고, 각 서브플롯이 무엇을 의미하는지 설명하세요.</li>
+  </ol>
+  <div class="tip">
+    <p class="tip-title">제출</p>
+    <p>시뮬레이션 결과 요약 캡처 + 그래프 4개 패널 각각의 해석 (1~2문장씩)</p>
+  </div>
 </div>
 
+<!-- 과제 B -->
 <div class="card">
-  <p class="card-title">과제 2: 지역 바꿔보기</p>
-  <p>대전 대신 다른 지역의 좌표를 넣어 기상조건에 따른 수량 변화를 비교해 보세요.</p>
-<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><span class="comment"># 예: 제주 (33.50°N, 126.53°E)</span>
-wdp_jeju = <span class="func">OpenMeteoWeatherDataProvider</span>(
-    latitude=<span class="number">33.50</span>, longitude=<span class="number">126.53</span>
-)
+  <p class="card-title">과제 B. 파종일 변경에 따른 수량 민감도 분석 <span class="badge badge-blue">응용</span></p>
+  <p><code>run_pcse_example.py</code>를 복사하여 수정하고, 출현일(emergence date)을 바꿔가며 수량 변화를 분석하세요.</p>
+  <ol>
+    <li>출현일을 <strong>5월 1일, 5월 15일, 6월 1일, 6월 15일</strong> 4가지로 설정</li>
+    <li>각각의 TWSO(곡물수량)와 LAIMAX(최대 LAI)를 기록</li>
+    <li>4개 결과를 하나의 막대그래프로 비교 시각화</li>
+  </ol>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><span class="comment"># 출현일만 바꾸면 됩니다</span>
+emergence_dates = [<span class="string">"2025-05-01"</span>, <span class="string">"2025-05-15"</span>, <span class="string">"2025-06-01"</span>, <span class="string">"2025-06-15"</span>]
 
-<span class="comment"># 예: 춘천 (37.88°N, 127.73°E)</span>
-wdp_cc = <span class="func">OpenMeteoWeatherDataProvider</span>(
-    latitude=<span class="number">37.88</span>, longitude=<span class="number">127.73</span>
-)</pre>
+results = []
+<span class="keyword">for</span> edate <span class="keyword">in</span> emergence_dates:
+    agro = yaml.<span class="func">safe_load</span>(f<span class="string">"""
+    - {edate[:4]}-04-01:
+        CropCalendar:
+            crop_name: rice
+            variety_name: Rice_501
+            crop_start_date: {edate}
+            crop_start_type: emergence
+            crop_end_date: {edate[:4]}-10-31
+            crop_end_type: harvest
+            max_duration: 200
+        TimedEvents: null
+        StateEvents: null
+    """</span>)
+    wofost = <span class="func">Wofost72_PP</span>(params, wdp, agro)
+    wofost.<span class="func">run_till_terminate</span>()
+    s = wofost.<span class="func">get_summary_output</span>()[<span class="number">0</span>]
+    results.<span class="func">append</span>({<span class="string">"date"</span>: edate, <span class="string">"TWSO"</span>: s[<span class="string">"TWSO"</span>], <span class="string">"LAIMAX"</span>: s[<span class="string">"LAIMAX"</span>]})</pre>
+  <div class="tip">
+    <p class="tip-title">제출</p>
+    <p>4개 시나리오 결과표 + 막대그래프 + "왜 늦게 심으면 수량이 변하는가?" 한 문단 설명</p>
+  </div>
 </div>
 
+<!-- 과제 C -->
 <div class="card">
-  <p class="card-title">과제 3: 파종일 변경 효과</p>
-  <p>출현일을 5월 1일, 5월 15일, 6월 1일로 바꿔가며 수량 변화를 비교해 보세요.</p>
+  <p class="card-title">과제 C. 농진청 실측 데이터로 모델 검증 <span class="badge badge-orange">심화</span></p>
+  <p>레포의 <code>data/</code> 폴더에 농촌진흥청 벼 작황 데이터(2017~2024)가 미리 저장되어 있습니다.</p>
+  <ol>
+    <li><code>data/rda_yield_2017_2024.csv</code>를 로드하고, <code>exam1</code> 컬럼(정조수량, kg/10a)의 분포를 확인하세요.
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><span class="keyword">import</span> pandas <span class="keyword">as</span> pd
+
+df = pd.<span class="func">read_csv</span>(<span class="string">"data/rda_yield_2017_2024.csv"</span>)
+df[<span class="string">"exam1"</span>] = pd.<span class="func">to_numeric</span>(df[<span class="string">"exam1"</span>], errors=<span class="string">"coerce"</span>)
+<span class="func">print</span>(df.<span class="func">groupby</span>(<span class="string">"exprYear"</span>)[<span class="string">"exam1"</span>].<span class="func">describe</span>())</pre>
+    </li>
+    <li><code>data/sim_yield.csv</code>에 저장된 WOFOST 결과와 실측 데이터를 병합하여 scatter plot을 그리세요.
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>df_sim = pd.<span class="func">read_csv</span>(<span class="string">"data/sim_yield.csv"</span>)
+df_obs = pd.<span class="func">read_csv</span>(<span class="string">"data/rda_yield_2017_2024.csv"</span>)
+df_obs[<span class="string">"exam1"</span>] = pd.<span class="func">to_numeric</span>(df_obs[<span class="string">"exam1"</span>], errors=<span class="string">"coerce"</span>)
+df_obs[<span class="string">"obs_dry"</span>] = df_obs[<span class="string">"exam1"</span>] * <span class="number">10</span> * <span class="number">0.86</span>  <span class="comment"># kg/ha 건물중</span>
+
+merged = df_obs.<span class="func">merge</span>(
+    df_sim[[<span class="string">"exprAreaCode"</span>, <span class="string">"exprYear"</span>, <span class="string">"sim_TWSO"</span>]],
+    on=[<span class="string">"exprAreaCode"</span>, <span class="string">"exprYear"</span>], how=<span class="string">"inner"</span>,
+).<span class="func">dropna</span>(subset=[<span class="string">"obs_dry"</span>])</pre>
+    </li>
+    <li>RMSE와 R&sup2;를 계산하세요.
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><span class="keyword">import</span> numpy <span class="keyword">as</span> np
+
+obs = merged[<span class="string">"obs_dry"</span>].values
+sim = merged[<span class="string">"sim_TWSO"</span>].values
+
+RMSE = np.<span class="func">sqrt</span>(np.<span class="func">mean</span>((obs - sim) ** <span class="number">2</span>))
+R2 = <span class="number">1</span> - np.<span class="func">sum</span>((obs - sim)**<span class="number">2</span>) / np.<span class="func">sum</span>((obs - np.<span class="func">mean</span>(obs))**<span class="number">2</span>)
+<span class="func">print</span>(f<span class="string">"RMSE = {RMSE:.0f} kg/ha, R² = {R2:.3f}"</span>)</pre>
+    </li>
+    <li>scatter plot에 1:1 line과 통계를 표시하세요.</li>
+  </ol>
+  <div class="tip">
+    <p class="tip-title">제출</p>
+    <p>scatter plot (1:1 line + RMSE/R&sup2; 표시) + "R&sup2;가 낮은 이유" 분석 (보정 미실시, 품종 차이 등)</p>
+  </div>
 </div>
+
+<!-- 과제 D (선택) -->
+<div class="card">
+  <p class="card-title">과제 D. CO<sub>2</sub> 농도 시나리오 분석 (선택) <span class="badge badge-orange">심화</span></p>
+  <p>WOFOST 7.3 모델은 CO<sub>2</sub> 반응을 시뮬레이션할 수 있습니다. 현재(400ppm) 대비 미래 시나리오(450, 550, 700ppm)에서 수량 변화를 분석하세요.</p>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><span class="keyword">from</span> pcse.models <span class="keyword">import</span> <span class="func">Wofost73_PP</span>
+<span class="keyword">from</span> pcse.input <span class="keyword">import</span> <span class="func">WOFOST73SiteDataProvider</span>
+
+co2_levels = [<span class="number">400</span>, <span class="number">450</span>, <span class="number">550</span>, <span class="number">700</span>]
+<span class="keyword">for</span> co2 <span class="keyword">in</span> co2_levels:
+    cropd = <span class="func">YAMLCropDataProvider</span>(model=<span class="func">Wofost73_PP</span>)
+    cropd.<span class="func">set_active_crop</span>(<span class="string">"rice"</span>, <span class="string">"Rice_501"</span>)
+    sited = <span class="func">WOFOST73SiteDataProvider</span>(WAV=<span class="number">100</span>, CO2=co2)
+    params = <span class="func">ParameterProvider</span>(cropdata=cropd, soildata=soild, sitedata=sited)
+    model = <span class="func">Wofost73_PP</span>(params, wdp, agro)
+    model.<span class="func">run_till_terminate</span>()
+    s = model.<span class="func">get_summary_output</span>()[<span class="number">0</span>]
+    <span class="func">print</span>(f<span class="string">"CO2={co2}ppm: TWSO={s['TWSO']:.0f}, LAI={s['LAIMAX']:.2f}"</span>)</pre>
+  <div class="tip">
+    <p class="tip-title">제출</p>
+    <p>CO<sub>2</sub> 농도별 수량 변화 그래프 + CO<sub>2</sub> 시비 효과에 대한 고찰</p>
+  </div>
+</div>
+
+<!-- 데이터 참조표 -->
+<h3>data/ 폴더 구조 (실습에 활용)</h3>
+<table>
+  <tr><th>파일</th><th>내용</th><th>주요 컬럼</th></tr>
+  <tr>
+    <td><code>rda_yield_2017_2024.csv</code></td>
+    <td>9회차 수량 (606건)</td>
+    <td><code>exam1</code>=정조수량(kg/10a), <code>pajong</code>=등숙비율(%)</td>
+  </tr>
+  <tr>
+    <td><code>rda_biomass_2017_2024.csv</code></td>
+    <td>8회차 건물중 (606건)</td>
+    <td><code>exam8</code>=잎비율, <code>exam9</code>=고사비율</td>
+  </tr>
+  <tr>
+    <td><code>rda_round02~07_*.csv</code></td>
+    <td>2~7회차 생육 (각 606건)</td>
+    <td><code>exam1</code>=초장(cm), <code>exam2</code>=주당경수</td>
+  </tr>
+  <tr>
+    <td><code>sim_yield.csv</code></td>
+    <td>WOFOST 시뮬레이션 결과 (35건)</td>
+    <td><code>sim_TWSO</code>, <code>sim_TAGP</code>, <code>sim_LAIMAX</code></td>
+  </tr>
+  <tr>
+    <td><code>weather/*.csv</code></td>
+    <td>7개 지점 기상 (2015~2025)</td>
+    <td>IRRAD, TMIN, TMAX, RAIN, WIND, ET0</td>
+  </tr>
+  <tr>
+    <td><code>code_areas.json</code></td>
+    <td>지역코드 &rarr; 지역명 매핑</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td><code>code_species.json</code></td>
+    <td>품종코드 &rarr; 품종명 매핑</td>
+    <td></td>
+  </tr>
+</table>
 
 <!-- ───────────────── 참고자료 ───────────────── -->
 <h2>10. 참고자료</h2>

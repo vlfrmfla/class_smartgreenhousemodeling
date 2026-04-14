@@ -153,6 +153,6 @@ for ax in axes.flat:
     ax.tick_params(axis="x", rotation=30)
 
 plt.tight_layout()
-plt.savefig("result_rice_daejeon_2025.png", dpi=150, bbox_inches="tight")
+plt.savefig("sim_fig/result_rice_daejeon_2025.png", dpi=150, bbox_inches="tight")
 print("\n그래프 저장: result_rice_daejeon_2025.png")
 plt.show()

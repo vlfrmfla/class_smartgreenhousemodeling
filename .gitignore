@@ -2,3 +2,6 @@
 __pycache__/
 *.pyc
 .claude/
+
+# 두류 데이터 (과제용 - 학생이 직접 다운로드)
+data/bean_*

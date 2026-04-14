@@ -758,26 +758,107 @@ R2 = <span class="number">1</span> - np.<span class="func">sum</span>((obs - sim
   </div>
 </div>
 
-<!-- 과제 D (선택) -->
+<!-- 과제 D -->
 <div class="card">
-  <p class="card-title">과제 D. CO<sub>2</sub> 농도 시나리오 분석 (선택) <span class="badge badge-orange">심화</span></p>
-  <p>WOFOST 7.3 모델은 CO<sub>2</sub> 반응을 시뮬레이션할 수 있습니다. 현재(400ppm) 대비 미래 시나리오(450, 550, 700ppm)에서 수량 변화를 분석하세요.</p>
-<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><span class="keyword">from</span> pcse.models <span class="keyword">import</span> <span class="func">Wofost73_PP</span>
-<span class="keyword">from</span> pcse.input <span class="keyword">import</span> <span class="func">WOFOST73SiteDataProvider</span>
+  <p class="card-title">과제 D. 두류(대두) 작황 데이터로 다른 작물 검증 <span class="badge badge-orange">심화</span></p>
+  <p>벼가 아닌 <strong>대두(soybean)</strong>로 동일한 시뮬레이션-검증 워크플로우를 수행하세요.
+     농촌진흥청 <a href="https://www.data.go.kr/data/15065006/openapi.do" target="_blank">두류 작황 성적 정보 서비스</a> API에서 실측 데이터를 받아옵니다.</p>
 
-co2_levels = [<span class="number">400</span>, <span class="number">450</span>, <span class="number">550</span>, <span class="number">700</span>]
-<span class="keyword">for</span> co2 <span class="keyword">in</span> co2_levels:
-    cropd = <span class="func">YAMLCropDataProvider</span>(model=<span class="func">Wofost73_PP</span>)
-    cropd.<span class="func">set_active_crop</span>(<span class="string">"rice"</span>, <span class="string">"Rice_501"</span>)
-    sited = <span class="func">WOFOST73SiteDataProvider</span>(WAV=<span class="number">100</span>, CO2=co2)
-    params = <span class="func">ParameterProvider</span>(cropdata=cropd, soildata=soild, sitedata=sited)
-    model = <span class="func">Wofost73_PP</span>(params, wdp, agro)
-    model.<span class="func">run_till_terminate</span>()
-    s = model.<span class="func">get_summary_output</span>()[<span class="number">0</span>]
-    <span class="func">print</span>(f<span class="string">"CO2={co2}ppm: TWSO={s['TWSO']:.0f}, LAI={s['LAIMAX']:.2f}"</span>)</pre>
+  <h3 style="margin-top:1rem;">D-1. 두류 실측 데이터 수집</h3>
+  <ol>
+    <li>공공데이터포털에서 <strong>두류 작황 성적 정보 서비스</strong>를 활용 신청하세요 (자동승인).</li>
+    <li>아래 코드로 데이터를 다운로드하세요.
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><span class="keyword">import</span> requests
+<span class="keyword">import</span> pandas <span class="keyword">as</span> pd
+
+SERVICE_KEY = <span class="string">"발급받은_Decoding_키"</span>
+BASE = <span class="string">"https://apis.data.go.kr/1390803/PlcrCrpstScoreInfoService_v2"</span>
+
+<span class="comment"># 코드목록 (품종, 지역)</span>
+codes = requests.<span class="func">get</span>(f<span class="string">"{BASE}/getPlcrCodeList_v2"</span>,
+    params={<span class="string">"serviceKey"</span>: SERVICE_KEY, <span class="string">"pageNo"</span>: <span class="string">"1"</span>, <span class="string">"numOfRows"</span>: <span class="string">"1000"</span>}).<span class="func">json</span>()
+<span class="func">print</span>(<span class="string">"품종:"</span>, codes[<span class="string">"body"</span>][<span class="string">"spciesCode"</span>])
+<span class="func">print</span>(<span class="string">"지역:"</span>, codes[<span class="string">"body"</span>][<span class="string">"exprAreaCode"</span>])
+
+<span class="comment"># 4회차 (수량 데이터) 다운로드</span>
+all_items = []
+<span class="keyword">for</span> yr <span class="keyword">in</span> <span class="func">range</span>(<span class="number">2017</span>, <span class="number">2025</span>):
+    r = requests.<span class="func">get</span>(f<span class="string">"{BASE}/getPlcrExprTmrd_04List_v2"</span>,
+        params={<span class="string">"serviceKey"</span>: SERVICE_KEY, <span class="string">"pageNo"</span>: <span class="string">"1"</span>,
+                <span class="string">"numOfRows"</span>: <span class="string">"1000"</span>, <span class="string">"srchExprYear"</span>: <span class="func">str</span>(yr)})
+    items = r.<span class="func">json</span>()[<span class="string">"body"</span>].<span class="func">get</span>(<span class="string">"items"</span>, [])
+    all_items.<span class="func">extend</span>(items)
+    <span class="func">print</span>(f<span class="string">"  {yr}: {len(items)}건"</span>)
+
+df = pd.<span class="func">DataFrame</span>(all_items)
+df.<span class="func">to_csv</span>(<span class="string">"data/bean_round04_2017_2024.csv"</span>, index=<span class="keyword">False</span>)
+<span class="func">print</span>(f<span class="string">"저장: {len(df)}건"</span>)</pre>
+    </li>
+  </ol>
+
+  <h3>D-2. WOFOST 대두 시뮬레이션</h3>
+  <p>PCSE 내장 대두 파라미터로 동일 지역/연도에 대해 시뮬레이션을 실행하세요.</p>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><span class="keyword">from</span> pcse.models <span class="keyword">import</span> <span class="func">Wofost72_PP</span>
+<span class="keyword">from</span> pcse.input <span class="keyword">import</span> (
+    <span class="func">YAMLCropDataProvider</span>, <span class="func">OpenMeteoWeatherDataProvider</span>,
+    <span class="func">DummySoilDataProvider</span>, <span class="func">WOFOST72SiteDataProvider</span>,
+)
+<span class="keyword">from</span> pcse.base <span class="keyword">import</span> <span class="func">ParameterProvider</span>
+
+<span class="comment"># 대두 파라미터 (6개 품종 사용 가능)</span>
+cropd = <span class="func">YAMLCropDataProvider</span>()
+cropd.<span class="func">set_active_crop</span>(<span class="string">"soybean"</span>, <span class="string">"Soybean_904"</span>)
+
+<span class="comment"># 대두 재배 기간: 6월 파종 ~ 10월 수확</span>
+agro_yaml = <span class="string">"""
+- 2023-06-01:
+    CropCalendar:
+        crop_name: soybean
+        variety_name: Soybean_904
+        crop_start_date: 2023-06-15
+        crop_start_type: emergence
+        crop_end_date: 2023-11-15
+        crop_end_type: harvest
+        max_duration: 200
+    TimedEvents: null
+    StateEvents: null
+"""</span>
+
+<span class="comment"># 익산 (35.95°N, 127.00°E) — 두류 시험지</span>
+wdp = <span class="func">OpenMeteoWeatherDataProvider</span>(latitude=<span class="number">35.95</span>, longitude=<span class="number">127.00</span>)
+soild = <span class="func">DummySoilDataProvider</span>()
+sited = <span class="func">WOFOST72SiteDataProvider</span>(WAV=<span class="number">100</span>)
+params = <span class="func">ParameterProvider</span>(cropdata=cropd, soildata=soild, sitedata=sited)
+
+wofost = <span class="func">Wofost72_PP</span>(params, wdp, yaml.<span class="func">safe_load</span>(agro_yaml))
+wofost.<span class="func">run_till_terminate</span>()
+s = wofost.<span class="func">get_summary_output</span>()[<span class="number">0</span>]
+<span class="func">print</span>(f<span class="string">"대두 수량: {s['TWSO']:.0f} kg/ha, LAI: {s['LAIMAX']:.2f}"</span>)</pre>
+
+  <h3>D-3. 실측 vs 시뮬레이션 비교</h3>
+  <p>수집한 두류 4회차 수량 데이터(<code>exam6</code> = 10a당 수량)와 WOFOST 결과를 scatter plot으로 비교하고, RMSE/R&sup2;를 계산하세요.</p>
+
+  <table>
+    <tr><th>두류 시험지역</th><th>위도</th><th>경도</th></tr>
+    <tr><td>밀양</td><td>35.49</td><td>128.75</td></tr>
+    <tr><td>수원</td><td>37.26</td><td>126.99</td></tr>
+    <tr><td>익산</td><td>35.95</td><td>127.00</td></tr>
+    <tr><td>나주</td><td>35.01</td><td>126.72</td></tr>
+    <tr><td>연천</td><td>38.10</td><td>127.07</td></tr>
+    <tr><td>청원</td><td>36.64</td><td>127.49</td></tr>
+  </table>
+
+  <table style="margin-top:.5rem;">
+    <tr><th>PCSE 내장 대두 품종</th></tr>
+    <tr><td><code>Soybean_901</code> ~ <code>Soybean_906</code>, <code>Soybean_VanHeemst_1988</code></td></tr>
+  </table>
+
   <div class="tip">
     <p class="tip-title">제출</p>
-    <p>CO<sub>2</sub> 농도별 수량 변화 그래프 + CO<sub>2</sub> 시비 효과에 대한 고찰</p>
+    <p>(1) 두류 데이터 수집 코드 + 수량 분포 확인 결과<br>
+       (2) WOFOST 대두 시뮬레이션 결과 (최소 2개 지역)<br>
+       (3) 실측 vs 모의 scatter plot + RMSE/R&sup2;<br>
+       (4) 벼 검증 결과(과제 C)와 비교하여 "어떤 작물이 더 잘 맞는가?" 한 문단 고찰</p>
   </div>
 </div>
 

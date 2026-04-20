@@ -2,6 +2,23 @@
 __pycache__/
 *.pyc
 .claude/
+.DS_Store
 
-# 두류 데이터 (과제용 - 학생이 직접 다운로드)
+# 두류(콩) 데이터 & 기상 데이터 — 과제 D용 (학생이 직접 API 호출)
 data/bean_*
+data/sim_yield.csv
+data/validation_result.csv
+
+# 두류 전용 시험 지역 기상 (벼 지역 7곳은 git에 유지)
+data/weather/weather_수원_*.csv
+data/weather/weather_익산_*.csv
+data/weather/weather_강릉_*.csv
+data/weather/weather_연천_*.csv
+data/weather/weather_청원_*.csv
+data/weather/weather_완주_*.csv
+data/weather/weather_청주_*.csv
+data/weather/weather_진주_*.csv
+
+# 결과물 (학생이 직접 생성)
+sim_fig/
+result_validation_bean.png
